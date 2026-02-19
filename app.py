@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 import csv
 import os
@@ -265,6 +265,11 @@ def get_summary():
 def get_insights():
     insights = tracker.get_insights()
     return jsonify(insights)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

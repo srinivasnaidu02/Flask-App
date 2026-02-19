@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoodMate - Flask</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            margin: 0;
+            padding: 20px;
+            color: white;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            color: black;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #5a67d8;
+        }
+
+        .log {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 MoodMate Tracker (Flask)</h1>
+
+        <div class="card">
+            <h2>Add Daily Log</h2>
+            <form id="logForm">
+                <label>Date</label>
+                <input type="date" id="date" required>
+
+                <label>Mood</label>
+                <select id="mood" required>
+                    <option value="">Select mood</option>
+                    <option value="happy">😊 Happy</option>
+                    <option value="sad">😢 Sad</option>
+                    <option value="angry">😠 Angry</option>
+                    <option value="anxious">😰 Anxious</option>
+                    <option value="calm">😌 Calm</option>
+                    <option value="excited">🤩 Excited</option>
+                    <option value="tired">😴 Tired</option>
+                    <option value="neutral">😐 Neutral</option>
+                </select>
+
+                <label>Productivity (1-10)</label>
+                <input type="number" id="productivity" min="1" max="10" required>
+
+                <label>Note</label>
+                <textarea id="note"></textarea>
+
+                <button type="submit">Save Log</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Your Logs</h2>
+            <div id="logs"></div>
+        </div>
+
+        <div class="card">
+            <h2>Summary</h2>
+            <div id="summary"></div>
+        </div>
+
+        <div class="card">
+            <h2>Insights</h2>
+            <div id="insights"></div>
+        </div>
+    </div>
+
+<script>
+    // IMPORTANT: Use relative path (NOT localhost:5000/api)
+    const API_BASE = "/api";
+
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("date").valueAsDate = new Date();
+        loadAll();
+    });
+
+    document.getElementById("logForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const data = {
+            date: document.getElementById("date").value,
+            mood: document.getElementById("mood").value,
+            productivity: document.getElementById("productivity").value,
+            note: document.getElementById("note").value
+        };
+
+        const res = await fetch(`${API_BASE}/logs`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+
+        if (res.ok) {
+            alert("Log saved!");
+            document.getElementById("logForm").reset();
+            document.getElementById("date").valueAsDate = new Date();
+            loadAll();
+        } else {
+            alert("Error saving log");
+        }
+    });
+
+    async function loadAll() {
+        loadLogs();
+        loadSummary();
+        loadInsights();
+    }
+
+    async function loadLogs() {
+        const res = await fetch(`${API_BASE}/logs`);
+        const logs = await res.json();
+
+        const container = document.getElementById("logs");
+
+        if (logs.length === 0) {
+            container.innerHTML = "<p>No logs yet.</p>";
+            return;
+        }
+
+        container.innerHTML = logs.map(log => `
+            <div class="log">
+                <b>Date:</b> ${log.date} <br>
+                <b>Mood:</b> ${log.mood} <br>
+                <b>Productivity:</b> ${log.productivity}/10 <br>
+                <i>${log.note || "No note"}</i>
+            </div>
+        `).join("");
+    }
+
+    async function loadSummary() {
+        const res = await fetch(`${API_BASE}/summary`);
+        const data = await res.json();
+
+        if (data.error) {
+            document.getElementById("summary").innerText = data.error;
+            return;
+        }
+
+        document.getElementById("summary").innerHTML = `
+            Total Entries: ${data.total_entries} <br>
+            Avg Productivity: ${data.average_productivity} <br>
+            Common Mood: ${data.most_common_mood} <br>
+            Best Day: ${data.most_productive_day}
+        `;
+    }
+
+    async function loadInsights() {
+        const res = await fetch(`${API_BASE}/insights`);
+        const data = await res.json();
+
+        if (data.error) {
+            document.getElementById("insights").innerText = data.error;
+            return;
+        }
+
+        document.getElementById("insights").innerHTML = `
+            Weekly Productivity: ${data.average_recent_productivity} <br>
+            Suggestions: <br>
+            ${data.suggestions.map(s => `• ${s}`).join("<br>")}
+        `;
+    }
+</script>
+</body>
+</html>
